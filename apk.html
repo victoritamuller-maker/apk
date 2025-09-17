@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Climático Bluetooth</title>
+    
+    <!-- PWA Meta tags -->
+    <meta name="description" content="Monitor climático con conexión Bluetooth para Arduino">
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Weather Monitor">
+    <link rel="apple-touch-icon" href="icons/icon-152x152.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .connection-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .btn-connect {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-connect:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+
+        .btn-disconnect {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-disconnect:hover {
+            background: #d32f2f;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .data-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .data-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .data-card.warning {
+            border-left-color: #ff9800;
+        }
+
+        .data-card.danger {
+            border-left-color: #f44336;
+        }
+
+        .data-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .data-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .data-unit {
+            font-size: 16px;
+            color: #888;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            margin: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .status-good {
+            background: #c8e6c9;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+
+        .status-bad {
+            background: #ffcdd2;
+            color: #c62828;
+            border: 2px solid #f44336;
+        }
+
+        .console {
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            height: 200px;
+            overflow-y: auto;
+            padding: 15px;
+            margin: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .console::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .console::-webkit-scrollbar-track {
+            background: #2e2e2e;
+        }
+
+        .console::-webkit-scrollbar-thumb {
+            background: #4CAF50;
+            border-radius: 3px;
+        }
+
+        .timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            margin: 10px 15px;
+            border-radius: 5px;
+            border-left: 4px solid #f44336;
+            font-size: 14px;
+        }
+
+        .device-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .device-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .device-item:hover {
+            background: #f5f5f5;
+        }
+
+        .device-name {
+            font-weight: bold;
+        }
+
+        .device-address {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌡️ Monitor Climático</h1>
+            <div class="status" id="connectionStatus">Desconectado</div>
+        </div>
+
+        <div class="connection-section">
+            <button class="btn btn-connect" id="connectBtn" onclick="connectBluetooth()">
+                🔵 Conectar Bluetooth
+            </button>
+            <button class="btn btn-disconnect" id="disconnectBtn" onclick="disconnectBluetooth()" style="display: none;">
+                🔴 Desconectar
+            </button>
+            <div id="deviceList" class="device-list" style="display: none;"></div>
+            <div id="errorMessage"></div>
+        </div>
+
+        <div class="status-indicator" id="overallStatus">
+            <span>⏳ Esperando conexión...</span>
+        </div>
+
+        <div class="data-grid">
+            <div class="data-card" id="tempCard">
+                <div class="data-value" id="temperature">--</div>
+                <div class="data-label">Temperatura <span class="data-unit">°C</span></div>
+            </div>
+            <div class="data-card" id="humCard">
+                <div class="data-value" id="humidity">--</div>
+                <div class="data-label">Humedad <span class="data-unit">%</span></div>
+            </div>
+            <div class="data-card" id="gasCard">
+                <div class="data-value" id="gas">--</div>
+                <div class="data-label">Gas <span class="data-unit">ppm</span></div>
+            </div>
+            <div class="data-card" id="lightCard">
+                <div class="data-value" id="light">--</div>
+                <div class="data-label">Luz <span class="data-unit">%</span></div>
+            </div>
+        </div>
+
+        <div class="console" id="console">
+            <div class="timestamp">[00:00:00]</div> Monitor Climático Bluetooth iniciado<br>
+            <div class="timestamp">[00:00:01]</div> Esperando conexión Bluetooth...<br>
+        </div>
+    </div>
+
+    <script>
+        let bluetoothDevice;
+        let bluetoothCharacteristic;
+        let isConnected = false;
+        let receivedData = '';
+
+        // Datos climáticos
+        let weatherData = {
+            temperature: null,
+            humidity: null,
+            gas: null,
+            light: null
+        };
+
+        // Umbrales (mismos que en el Arduino)
+        const THRESHOLDS = {
+            TEMP_MIN: 15,
+            TEMP_MAX: 30,
+            HUM_MIN: 30,
+            HUM_MAX: 70,
+            GAS_MAX: 600,
+            LIGHT_MIN: 20
+        };
+
+        function logToConsole(message, type = 'info') {
+            const console = document.getElementById('console');
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            
+            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            console.appendChild(logEntry);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.innerHTML = `<div class="error-message">${message}</div>`;
+            logToConsole(`ERROR: ${message}`, 'error');
+            setTimeout(() => {
+                errorDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function updateConnectionStatus(status, isConnecting = false) {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.textContent = status;
+            if (isConnecting) {
+                statusElement.innerHTML += '<div class="loading"></div>';
+            }
+        }
+
+        async function connectBluetooth() {
+            try {
+                if (!navigator.bluetooth) {
+                    throw new Error('Bluetooth Web API no está soportado en este navegador');
+                }
+
+                updateConnectionStatus('Buscando dispositivos...', true);
+                logToConsole('Iniciando búsqueda Bluetooth...');
+
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: 'HC-05' },
+                        { name: 'HC-06' },
+                        { namePrefix: 'ESP32' },
+                        { namePrefix: 'Arduino' }
+                    ],
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // UART service UUID
+                });
+
+                updateConnectionStatus('Conectando...', true);
+                logToConsole(`Dispositivo seleccionado: ${bluetoothDevice.name}`);
+
+                const server = await bluetoothDevice.gatt.connect();
+                logToConsole('Conectado al servidor GATT');
+
+                // Intentar conectar al servicio UART
+                try {
+                    const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                    bluetoothCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+                    
+                    // Suscribirse a notificaciones
+                    await bluetoothCharacteristic.startNotifications();
+                    bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleDataReceived);
+                } catch (serviceError) {
+                    logToConsole('Servicio UART no encontrado, usando modo básico');
+                }
+
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                isConnected = true;
+                updateConnectionStatus('Conectado');
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'block';
+                
+                updateOverallStatus();
+                logToConsole('✅ Conexión Bluetooth establecida');
+
+            } catch (error) {
+                logToConsole(`❌ Error de conexión: ${error.message}`);
+                showError(`Error de conexión: ${error.message}`);
+                updateConnectionStatus('Error de conexión');
+            }
+        }
+
+        function disconnectBluetooth() {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                bluetoothDevice.gatt.disconnect();
+            }
+            onDisconnected();
+        }
+
+        function onDisconnected() {
+            isConnected = false;
+            bluetoothDevice = null;
+            bluetoothCharacteristic = null;
+            
+            updateConnectionStatus('Desconectado');
+            document.getElementById('connectBtn').style.display = 'block';
+            document.getElementById('disconnectBtn').style.display = 'none';
+            
+            // Resetear datos
+            weatherData = {
+                temperature: null,
+                humidity: null,
+                gas: null,
+                light: null
+            };
+            
+            updateDisplay();
+            updateOverallStatus();
+            logToConsole('🔴 Conexión Bluetooth perdida');
+        }
+
+        function handleDataReceived(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            receivedData += value;
+            
+            // Procesar líneas completas
+            const lines = receivedData.split('\n');
+            receivedData = lines.pop(); // Guardar datos incompletos
+            
+            lines.forEach(line => {
+                if (line.trim()) {
+                    logToConsole(`📡 ${line.trim()}`);
+                    parseArduinoData(line.trim());
+                }
+            });
+        }
+
+        function parseArduinoData(data) {
+            // Simular parsing de datos del Arduino
+            // En implementación real, aquí analizarías los mensajes específicos del Arduino
+            
+            if (data.includes('Temp:')) {
+                const tempMatch = data.match(/Temp:\s*(\d+\.?\d*)/);
+                if (tempMatch) {
+                    weatherData.temperature = parseFloat(tempMatch[1]);
+                }
+            }
+            
+            if (data.includes('Hum:')) {
+                const humMatch = data.match(/Hum:\s*(\d+\.?\d*)/);
+                if (humMatch) {
+                    weatherData.humidity = parseFloat(humMatch[1]);
+                }
+            }
+            
+            if (data.includes('MQ2:')) {
+                const gasMatch = data.match(/MQ2:\s*(\d+)/);
+                if (gasMatch) {
+                    weatherData.gas = parseInt(gasMatch[1]);
+                }
+            }
+            
+            if (data.includes('Luz:')) {
+                const lightMatch = data.match(/Luz:\s*(\d+)/);
+                if (lightMatch) {
+                    weatherData.light = parseInt(lightMatch[1]);
+                }
+            }
+            
+            // Simular datos para demo
+            if (data.includes('Dato guardado')) {
+                simulateDataUpdate();
+            }
+            
+            updateDisplay();
+            updateOverallStatus();
+        }
+
+        function simulateDataUpdate() {
+            // Generar datos simulados para demo
+            weatherData.temperature = 20 + Math.random() * 15;
+            weatherData.humidity = 40 + Math.random() * 30;
+            weatherData.gas = Math.random() * 800;
+            weatherData.light = Math.random() * 100;
+        }
+
+        function updateDisplay() {
+            // Actualizar temperatura
+            const tempEl = document.getElementById('temperature');
+            const tempCard = document.getElementById('tempCard');
+            if (weatherData.temperature !== null) {
+                tempEl.textContent = weatherData.temperature.toFixed(1);
+                tempCard.className = 'data-card';
+                if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
+                    tempCard.classList.add('danger');
+                }
+            }
+
+            // Actualizar humedad
+            const humEl = document.getElementById('humidity');
+            const humCard = document.getElementById('humCard');
+            if (weatherData.humidity !== null) {
+                humEl.textContent = weatherData.humidity.toFixed(1);
+                humCard.className = 'data-card';
+                if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
+                    humCard.classList.add('warning');
+                }
+            }
+
+            // Actualizar gas
+            const gasEl = document.getElementById('gas');
+            const gasCard = document.getElementById('gasCard');
+            if (weatherData.gas !== null) {
+                gasEl.textContent = weatherData.gas;
+                gasCard.className = 'data-card';
+                if (weatherData.gas > THRESHOLDS.GAS_MAX) {
+                    gasCard.classList.add('danger');
+                }
+            }
+
+            // Actualizar luz
+            const lightEl = document.getElementById('light');
+            const lightCard = document.getElementById('lightCard');
+            if (weatherData.light !== null) {
+                lightEl.textContent = weatherData.light.toFixed(0);
+                lightCard.className = 'data-card';
+                if (weatherData.light < THRESHOLDS.LIGHT_MIN) {
+                    lightCard.classList.add('warning');
+                }
+            }
+        }
+
+        function updateOverallStatus() {
+            const statusEl = document.getElementById('overallStatus');
+            
+            if (!isConnected) {
+                statusEl.className = 'status-indicator';
+                statusEl.innerHTML = '<span>⏳ Esperando conexión...</span>';
+                return;
+            }
+
+            // Verificar si todas las condiciones son buenas
+            const allDataAvailable = weatherData.temperature !== null && 
+                                   weatherData.humidity !== null && 
+                                   weatherData.gas !== null && 
+                                   weatherData.light !== null;
+
+            if (!allDataAvailable) {
+                statusEl.className = 'status-indicator';
+                statusEl.innerHTML = '<span>📡 Recibiendo datos...</span>';
+                return;
+            }
+
+            const tempOK = weatherData.temperature >= THRESHOLDS.TEMP_MIN && 
+                          weatherData.temperature <= THRESHOLDS.TEMP_MAX;
+            const humOK = weatherData.humidity >= THRESHOLDS.HUM_MIN && 
+                         weatherData.humidity <= THRESHOLDS.HUM_MAX;
+            const gasOK = weatherData.gas <= THRESHOLDS.GAS_MAX;
+            const lightOK = weatherData.light >= THRESHOLDS.LIGHT_MIN;
+
+            if (tempOK && humOK && gasOK && lightOK) {
+                statusEl.className = 'status-indicator status-good';
+                statusEl.innerHTML = '<span>✅ Condiciones BUENAS</span>';
+            } else {
+                statusEl.className = 'status-indicator status-bad';
+                statusEl.innerHTML = '<span>⚠️ Condiciones MALAS</span>';
+            }
+        }
+
+        // Simular datos iniciales para demo
+        setInterval(() => {
+            if (isConnected) {
+                simulateDataUpdate();
+                updateDisplay();
+                updateOverallStatus();
+                
+                // Simular mensajes del Arduino
+                const messages = [
+                    'Dato guardado en SD.',
+                    `Temp: ${weatherData.temperature.toFixed(1)}C, Hum: ${weatherData.humidity.toFixed(1)}%`,
+                    `MQ2: ${weatherData.gas}, Luz: ${weatherData.light.toFixed(0)}%`
+                ];
+                
+                if (Math.random() < 0.3) {
+                    logToConsole(`📡 ${messages[Math.floor(Math.random() * messages.length)]}`);
+                }
+            }
+        }, 3000);
+
+        // Inicializar display
+        updateDisplay();
+        updateOverallStatus();
+        
+        // Registrar Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    logToConsole('✅ Service Worker registrado correctamente');
+                }).catch(function(error) {
+                    logToConsole(`❌ Error registrando Service Worker: ${error}`);
+                });
+            });
+        }
+        
+        // Detectar si se puede instalar como PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Mostrar botón de instalación si lo deseas
+            logToConsole('📱 App puede ser instalada como PWA');
+        });
+    </script>
+</body>
+</html>
