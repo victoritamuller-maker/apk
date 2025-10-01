@@ -783,4 +783,153 @@
             if (data.includes('TIMESTAMP:')) {
                 const timestampMatch = data.match(/TIMESTAMP:\s*(.*)/);
                 if (timestampMatch) {
-                    log
+                    logToConsole(`🕒 ${timestampMatch[1]}`);
+                }
+            }
+            
+            if (data.includes('DATA_SAVED:')) {
+                logToConsole('💾 Datos guardados en SD');
+            }
+            
+            if (data.includes('ERROR:')) {
+                const errorMatch = data.match(/ERROR:\s*(.*)/);
+                if (errorMatch) {
+                    logToConsole(`❌ ${errorMatch[1]}`, 'error');
+                }
+            }
+            
+            if (data.includes('INFO:')) {
+                const infoMatch = data.match(/INFO:\s*(.*)/);
+                if (infoMatch) {
+                    logToConsole(`ℹ️ ${infoMatch[1]}`, 'info');
+                }
+            }
+            
+            updateDisplay();
+            updateOverallStatus();
+        }
+
+        function sendCommand(command) {
+            if (bluetoothCharacteristic && isConnected) {
+                try {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(command + '\n');
+                    bluetoothCharacteristic.writeValue(data);
+                    logToConsole(`📤 Comando: ${command}`);
+                } catch (error) {
+                    logToConsole(`❌ Error enviando: ${error.message}`);
+                }
+            }
+        }
+
+        function requestStatus() {
+            sendCommand('STATUS');
+        }
+
+        function requestTime() {
+            sendCommand('TIME');
+        }
+
+        function resetLeds() {
+            sendCommand('RESET_LEDS');
+        }
+
+        function requestInfo() {
+            sendCommand('INFO');
+        }
+
+        function updateDisplay() {
+            const tempEl = document.getElementById('temperature');
+            const tempCard = document.getElementById('tempCard');
+            if (weatherData.temperature !== null) {
+                tempEl.textContent = weatherData.temperature.toFixed(1);
+                tempCard.className = 'data-card';
+                if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
+                    tempCard.classList.add('danger');
+                }
+            }
+
+            const humEl = document.getElementById('humidity');
+            const humCard = document.getElementById('humCard');
+            if (weatherData.humidity !== null) {
+                humEl.textContent = weatherData.humidity.toFixed(1);
+                humCard.className = 'data-card';
+                if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
+                    humCard.classList.add('warning');
+                }
+            }
+
+            const gasEl = document.getElementById('gas');
+            const gasCard = document.getElementById('gasCard');
+            if (weatherData.gas !== null) {
+                gasEl.textContent = weatherData.gas;
+                gasCard.className = 'data-card';
+                if (weatherData.gas > THRESHOLDS.GAS_MAX) {
+                    gasCard.classList.add('danger');
+                }
+            }
+
+            const lightEl = document.getElementById('light');
+            const lightCard = document.getElementById('lightCard');
+            if (weatherData.light !== null) {
+                lightEl.textContent = weatherData.light.toFixed(0);
+                lightCard.className = 'data-card';
+            }
+        }
+
+        function updateOverallStatus() {
+            const statusEl = document.getElementById('overallStatus');
+            
+            if (!isConnected) {
+                statusEl.className = 'status-indicator';
+                statusEl.innerHTML = '<span>⏳ ESPERANDO CONEXIÓN...</span>';
+                return;
+            }
+
+            const allDataAvailable = weatherData.temperature !== null && 
+                                   weatherData.humidity !== null && 
+                                   weatherData.gas !== null;
+
+            if (!allDataAvailable) {
+                statusEl.className = 'status-indicator';
+                statusEl.innerHTML = '<span>📡 RECIBIENDO DATOS...</span>';
+                return;
+            }
+
+            const tempOK = weatherData.temperature >= THRESHOLDS.TEMP_MIN && 
+                          weatherData.temperature <= THRESHOLDS.TEMP_MAX;
+            const humOK = weatherData.humidity >= THRESHOLDS.HUM_MIN && 
+                         weatherData.humidity <= THRESHOLDS.HUM_MAX;
+            const gasOK = weatherData.gas <= THRESHOLDS.GAS_MAX;
+
+            if (tempOK && humOK && gasOK) {
+                statusEl.className = 'status-indicator status-good';
+                statusEl.innerHTML = '<span>✅ CONDICIONES BUENAS</span>';
+            } else {
+                statusEl.className = 'status-indicator status-bad';
+                statusEl.innerHTML = '<span>⚠️ CONDICIONES MALAS</span>';
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    logToConsole('✅ Service Worker registrado');
+                }).catch(function(error) {
+                    logToConsole(`❌ Error SW: ${error}`);
+                });
+            });
+        }
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            logToConsole('📱 App instalable como PWA');
+        });
+
+        updateDisplay();
+        updateOverallStatus();
+    </script>
+</body>
+</html>
