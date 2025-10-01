@@ -1,22 +1,34 @@
 // Service Worker para Weather Monitor PWA
-const CACHE_NAME = 'weather-monitor-v1.0';
+const CACHE_NAME = 'weather-monitor-v3.0';
 const urlsToCache = [
   '/apk/',
   '/apk/index.html',
-  '/apk/manifest.json'
+  '/apk/manifest.json',
+  'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap'
 ];
 
 // Instalación del Service Worker
 self.addEventListener('install', function(event) {
-  console.log('[SW] Instalando Service Worker...');
+  console.log('[SW] Instalando Service Worker v3.0...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
         console.log('[SW] Cache abierto');
-        return cache.addAll(urlsToCache);
+        // Intentar cachear, pero no fallar si alguno falla
+        return cache.addAll(urlsToCache).catch(function(error) {
+          console.log('[SW] Error al cachear algunos recursos:', error);
+          // Cachear uno por uno
+          return Promise.all(
+            urlsToCache.map(function(url) {
+              return cache.add(url).catch(function(err) {
+                console.log('[SW] No se pudo cachear:', url);
+              });
+            })
+          );
+        });
       })
       .catch(function(error) {
-        console.log('[SW] Error al cachear:', error);
+        console.log('[SW] Error al abrir cache:', error);
       })
   );
   self.skipWaiting();
