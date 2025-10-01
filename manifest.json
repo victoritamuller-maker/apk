@@ -5,8 +5,8 @@
   "start_url": "/apk/",
   "scope": "/apk/",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#4CAF50",
+  "background_color": "#0a0e27",
+  "theme_color": "#0a0e27",
   "orientation": "portrait",
   "icons": [
     {
@@ -59,6 +59,6 @@
     }
   ],
   "categories": ["utilities", "productivity"],
-  "lang": "es",
+  "lang": "es-AR",
   "dir": "ltr"
 }
