@@ -1,5 +1,5 @@
 // Service Worker para Weather Monitor PWA
-const CACHE_NAME = 'weather-monitor-v3.0';
+const CACHE_NAME = 'weather-monitor-v4.0';
 const urlsToCache = [
   '/apk/',
   '/apk/index.html',
