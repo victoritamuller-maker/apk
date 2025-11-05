@@ -637,12 +637,11 @@
                 updateConnectionStatus('Buscando...', true);
                 logToConsole('🔍 Buscando dispositivos BLE con el servicio FFE0...');
 
-                // 1. Pedir dispositivo filtrando por el servicio correcto (FFE0)
+                // 1. Pedir dispositivo forzando el pop-up
+                logToConsole('🔍 Abriendo selector de dispositivos...');
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    filters: [{
-                        services: [HM10_SERVICE_UUID]
-                    }],
-                    optionalServices: [HM10_SERVICE_UUID] // Ser explícito
+                    acceptAllDevices: true, // Esto fuerza a que aparezca el pop-up
+                    optionalServices: [HM10_SERVICE_UUID] // Le decimos qué servicio vamos a querer usar
                 });
 
                 updateConnectionStatus('Conectando...', true);
