@@ -625,71 +625,68 @@
         }
 
         async function connectBluetooth() {
-            try {
-                if (!navigator.bluetooth) {
-                    throw new Error('Bluetooth Web API no soportado');
-                }
+            // UUIDs para el servicio serial del HM-10 (y clones como CC41-A)
+            const HM10_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
+            const HM10_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
-                updateConnectionStatus('Buscando...', true);
-                logToConsole('🔍 Iniciando búsqueda Bluetooth...');
+            try {
+                if (!navigator.bluetooth) {
+                    throw new Error('Bluetooth Web API no soportado');
+                }
 
-                bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,  // Esto muestra TODOS los dispositivos BLE
-                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-                });
+                updateConnectionStatus('Buscando...', true);
+                logToConsole('🔍 Buscando dispositivos BLE con el servicio FFE0...');
 
-                updateConnectionStatus('Conectando...', true);
-                logToConsole(`📱 Dispositivo: ${bluetoothDevice.name}`);
+                // 1. Pedir dispositivo filtrando por el servicio correcto (FFE0)
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{
+                        services: [HM10_SERVICE_UUID]
+                    }],
+                    optionalServices: [HM10_SERVICE_UUID] // Ser explícito
+                });
 
-                const server = await bluetoothDevice.gatt.connect();
-                logToConsole('✅ Servidor GATT conectado');
+                updateConnectionStatus('Conectando...', true);
+                logToConsole(`📱 Dispositivo encontrado: ${bluetoothDevice.name || 'HM-10'}`);
 
-                try {
-                    const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-                    bluetoothCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
-                    
-                    await bluetoothCharacteristic.startNotifications();
-                    bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleDataReceived);
-                    
-                    setTimeout(() => {
-                        sendCommand('STATUS');
-                    }, 1000);
-                    
-                } catch (serviceError) {
-                    logToConsole('⚠️ Intentando servicio básico...');
-                    try {
-                        const services = await server.getPrimaryServices();
-                        logToConsole(`📡 Servicios: ${services.length}`);
-                        if (services.length > 0) {
-                            const characteristics = await services[0].getCharacteristics();
-                            if (characteristics.length > 0) {
-                                bluetoothCharacteristic = characteristics[0];
-                                await bluetoothCharacteristic.startNotifications();
-                                bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleDataReceived);
-                            }
-                        }
-                    } catch (fallbackError) {
-                        logToConsole('❌ No se pudo establecer comunicación');
-                    }
-                }
+                // 2. Conectar al servidor GATT
+                const server = await bluetoothDevice.gatt.connect();
+                logToConsole('✅ Servidor GATT conectado');
 
-                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                // 3. Obtener el servicio primario FFE0
+                const service = await server.getPrimaryService(HM10_SERVICE_UUID);
+                logToConsole('✅ Servicio FFE0 obtenido');
 
-                isConnected = true;
-                updateConnectionStatus('Conectado');
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('disconnectBtn').style.display = 'block';
-                document.getElementById('controlButtons').style.display = 'flex';
-                
-                updateOverallStatus();
-                logToConsole('✅ Conexión establecida');
+                // 4. Obtener la característica FFE1 (usada para leer y escribir)
+                bluetoothCharacteristic = await service.getCharacteristic(HM10_CHARACTERISTIC_UUID);
+                logToConsole('✅ Característica FFE1 obtenida');
 
-            } catch (error) {
-                logToConsole(`❌ Error: ${error.message}`);
-                showError(`Error de conexión: ${error.message}`);
-                updateConnectionStatus('Error');
-            }
-        }
+                // 5. Iniciar notificaciones para recibir datos
+                await bluetoothCharacteristic.startNotifications();
+                bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleDataReceived);
+                logToConsole('🔔 Notificaciones iniciadas');
+
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                isConnected = true;
+          _       updateConnectionStatus('Conectado');
+                document.getElementById('connectBtn').style.display = 'none';
+  A           document.getElementById('disconnectBtn').style.display = 'block';
+                document.getElementById('controlButtons').style.display = 'flex';
+                
+                updateOverallStatus();
+                logToConsole('✅ Conexión establecida. Solicitando estado...');
+
+                // Enviar un comando inicial para obtener datos
+                setTimeout(() => {
+                    requestStatus();
+                }, 1000);
+
+            } catch (error) {
+                logToConsole(`❌ Error: ${error.message}`);
+                showError(`Error de conexión: ${error.message}`);
+                updateConnectionStatus('Error');
+            }
+        }
 
         function disconnectBluetooth() {
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
