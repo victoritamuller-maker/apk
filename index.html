@@ -559,73 +559,73 @@
         </div>
     </div>
 
-    <script>
-        // Crear partículas flotantes
-        function createParticles() {
-            for(let i = 0; i < 20; i++) {
-                setTimeout(() => {
-                    const particle = document.createElement('div');
-                    particle.className = 'particle';
-                    particle.style.left = Math.random() * 100 + '%';
-                    particle.style.top = Math.random() * 100 + '%';
-                    particle.style.animation = `float ${5 + Math.random() * 10}s ease-in-out infinite`;
-                    particle.style.animationDelay = Math.random() * 5 + 's';
-                    document.body.appendChild(particle);
-                }, i * 200);
-            }
-        }
-        createParticles();
+<script>
+        // Crear partículas flotantes
+        function createParticles() {
+            for(let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.left = Math.random() * 100 + '%';
+                    particle.style.top = Math.random() * 100 + '%';
+                    particle.style.animation = `float ${5 + Math.random() * 10}s ease-in-out infinite`;
+                    particle.style.animationDelay = Math.random() * 5 + 's';
+                    document.body.appendChild(particle);
+                }, i * 200);
+            }
+        }
+        createParticles();
 
-        let bluetoothDevice;
-        let bluetoothCharacteristic;
-        let isConnected = false;
-        let receivedData = '';
+        let bluetoothDevice;
+        let bluetoothCharacteristic;
+        let isConnected = false;
+        let receivedData = '';
 
-        let weatherData = {
-            temperature: null,
-            humidity: null,
-            gas: null,
-            light: null
-        };
+        let weatherData = {
+            temperature: null,
+            humidity: null,
+            gas: null,
+            light: null
+        };
 
-        const THRESHOLDS = {
-            TEMP_MIN: 15,
-            TEMP_MAX: 30,
-            HUM_MIN: 30,
-            HUM_MAX: 70,
-            GAS_MAX: 600
-        };
+        const THRESHOLDS = {
+            TEMP_MIN: 15,
+            TEMP_MAX: 30,
+            HUM_MIN: 30,
+            HUM_MAX: 70,
+            GAS_MAX: 600
+        };
 
-        function logToConsole(message, type = 'info') {
-            const console = document.getElementById('console');
-            const now = new Date();
-            const timestamp = now.toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            
-            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
-            console.appendChild(logEntry);
-            console.scrollTop = console.scrollHeight;
-        }
+        function logToConsole(message, type = 'info') {
+            const console = document.getElementById('console');
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            
+            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            console.appendChild(logEntry);
+            console.scrollTop = console.scrollHeight;
+        }
 
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.innerHTML = `<div class="error-message">⚠️ ${message}</div>`;
-            logToConsole(`ERROR: ${message}`, 'error');
-            setTimeout(() => {
-                errorDiv.innerHTML = '';
-            }, 5000);
-        }
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.innerHTML = `<div class="error-message">⚠️ ${message}</div>`;
+            logToConsole(`ERROR: ${message}`, 'error');
+            setTimeout(() => {
+                errorDiv.innerHTML = '';
+            }, 5000);
+        }
 
-        function updateConnectionStatus(status, isConnecting = false) {
-            const statusElement = document.getElementById('connectionStatus');
-            statusElement.textContent = status.toUpperCase();
-            if (isConnecting) {
-                statusElement.innerHTML += '<div class="loading"></div>';
-            }
-        }
+        function updateConnectionStatus(status, isConnecting = false) {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.textContent = status.toUpperCase();
+            if (isConnecting) {
+                statusElement.innerHTML += '<div class="loading"></div>';
+            }
+        }
 
-        async function connectBluetooth() {
-            // UUIDs para el servicio serial del HM-10 (y clones como CC41-A)
+        async function connectBluetooth() {
+            // UUIDs para el servicio serial del HM-10
             const HM10_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
             const HM10_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
@@ -635,10 +635,9 @@
                 }
 
                 updateConnectionStatus('Buscando...', true);
-                logToConsole('🔍 Buscando dispositivos BLE con el servicio FFE0...');
+                logToConsole('🔍 Abriendo selector de dispositivos...');
 
                 // 1. Pedir dispositivo forzando el pop-up
-                logToConsole('🔍 Abriendo selector de dispositivos...');
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true, // Esto fuerza a que aparezca el pop-up
                     optionalServices: [HM10_SERVICE_UUID] // Le decimos qué servicio vamos a querer usar
@@ -667,10 +666,10 @@
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
                 isConnected = true;
-          _       updateConnectionStatus('Conectado');
+                updateConnectionStatus('Conectado');
                 document.getElementById('connectBtn').style.display = 'none';
-  A           document.getElementById('disconnectBtn').style.display = 'block';
-                document.getElementById('controlButtons').style.display = 'flex';
+                document.getElementById('disconnectBtn').style.display = 'block';
+                document.getElementById('controlButtons').style.display = 'flex';
                 
                 updateOverallStatus();
                 logToConsole('✅ Conexión establecida. Solicitando estado...');
@@ -687,241 +686,244 @@
             }
         }
 
-        function disconnectBluetooth() {
-            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                bluetoothDevice.gatt.disconnect();
-            }
-            onDisconnected();
-        }
+        function disconnectBluetooth() {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                bluetoothDevice.gatt.disconnect();
+            }
+            onDisconnected();
+        }
 
-        function onDisconnected() {
-            isConnected = false;
-            bluetoothDevice = null;
-            bluetoothCharacteristic = null;
-            
-            updateConnectionStatus('Desconectado');
-            document.getElementById('connectBtn').style.display = 'block';
-            document.getElementById('disconnectBtn').style.display = 'none';
-            document.getElementById('controlButtons').style.display = 'none';
-            
-            weatherData = {
-                temperature: null,
-                humidity: null,
-                gas: null,
-                light: null
-            };
-            
-            updateDisplay();
-            updateOverallStatus();
-            logToConsole('🔴 Desconectado');
-        }
+        function onDisconnected() {
+            isConnected = false;
+            bluetoothDevice = null;
+            bluetoothCharacteristic = null;
+            
+            updateConnectionStatus('Desconectado');
+            document.getElementById('connectBtn').style.display = 'block';
+            document.getElementById('disconnectBtn').style.display = 'none';
+            document.getElementById('controlButtons').style.display = 'none';
+            
+            weatherData = {
+                temperature: null,
+                humidity: null,
+                gas: null,
+                light: null
+            };
+            
+            updateDisplay();
+            updateOverallStatus();
+            logToConsole('🔴 Desconectado');
+        }
 
-        function handleDataReceived(event) {
-            const value = new TextDecoder().decode(event.target.value);
-            receivedData += value;
-            
-            const lines = receivedData.split('\n');
-            receivedData = lines.pop();
-            
-            lines.forEach(line => {
-                if (line.trim()) {
-                    logToConsole(`📡 ${line.trim()}`);
-                    parseArduinoData(line.trim());
-                }
-            });
-        }
+        function handleDataReceived(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            receivedData += value;
+            
+            const lines = receivedData.split('\n');
+            receivedData = lines.pop();
+            
+            lines.forEach(line => {
+                if (line.trim()) {
+                    logToConsole(`📡 ${line.trim()}`);
+                    parseArduinoData(line.trim());
+                }
+            });
+        }
 
-        function parseArduinoData(data) {
-            if (data.includes('TEMP:')) {
-                const tempMatch = data.match(/TEMP:\s*(\d+\.?\d*)/);
-                if (tempMatch && tempMatch[1] !== 'ERROR') {
-                    weatherData.temperature = parseFloat(tempMatch[1]);
-                    logToConsole(`🌡️ Temperatura: ${weatherData.temperature}°C`);
-                }
-            }
-            
-            if (data.includes('HUM:')) {
-                const humMatch = data.match(/HUM:\s*(\d+\.?\d*)/);
-                if (humMatch && humMatch[1] !== 'ERROR') {
-                    weatherData.humidity = parseFloat(humMatch[1]);
-                    logToConsole(`💧 Humedad: ${weatherData.humidity}%`);
-                }
-            }
-            
-            if (data.includes('GAS:')) {
-                const gasMatch = data.match(/GAS:\s*(\d+)/);
-                if (gasMatch) {
-                    weatherData.gas = parseInt(gasMatch[1]);
-                    logToConsole(`💨 Gas: ${weatherData.gas} ppm`);
-                }
-            }
-            
-            if (data.includes('LIGHT:')) {
-                const lightMatch = data.match(/LIGHT:\s*(\d+)/);
-                if (lightMatch) {
-                    weatherData.light = parseInt(lightMatch[1]);
-                    logToConsole(`☀️ Luz: ${weatherData.light}%`);
-                }
-            }
-            
-            if (data.includes('STATUS:')) {
-                const statusMatch = data.match(/STATUS:\s*(\w+)/);
-                if (statusMatch) {
-                    const status = statusMatch[1];
-                    logToConsole(`📊 Estado: ${status === 'GOOD' ? 'BUENAS' : 'MALAS'}`);
-                }
-            }
-            
-            if (data.includes('TIMESTAMP:')) {
-                const timestampMatch = data.match(/TIMESTAMP:\s*(.*)/);
-                if (timestampMatch) {
-                    logToConsole(`🕒 ${timestampMatch[1]}`);
-                }
-            }
-            
-            if (data.includes('DATA_SAVED:')) {
-                logToConsole('💾 Datos guardados en SD');
-            }
-            
-            if (data.includes('ERROR:')) {
-                const errorMatch = data.match(/ERROR:\s*(.*)/);
-                if (errorMatch) {
-                    logToConsole(`❌ ${errorMatch[1]}`, 'error');
-                }
-            }
-            
-            if (data.includes('INFO:')) {
-                const infoMatch = data.match(/INFO:\s*(.*)/);
-                if (infoMatch) {
-                    logToConsole(`ℹ️ ${infoMatch[1]}`, 'info');
-                }
-            }
-            
-            updateDisplay();
-            updateOverallStatus();
-        }
+        function parseArduinoData(data) {
+            if (data.includes('TEMP:')) {
+                const tempMatch = data.match(/TEMP:\s*(\d+\.?\d*)/);
+                if (tempMatch && tempMatch[1] !== 'ERROR') {
+                    weatherData.temperature = parseFloat(tempMatch[1]);
+                    logToConsole(`🌡️ Temperatura: ${weatherData.temperature}°C`);
+               }
+            }
+            
+            if (data.includes('HUM:')) {
+                const humMatch = data.match(/HUM:\s*(\d+\.?\d*)/);
+                if (humMatch && humMatch[1] !== 'ERROR') {
+                    weatherData.humidity = parseFloat(humMatch[1]);
+                    logToConsole(`💧 Humedad: ${weatherData.humidity}%`);
+                }
+            }
+            
+            if (data.includes('GAS:')) {
+                const gasMatch = data.match(/GAS:\s*(\d+)/);
+                if (gasMatch) {
+                    weatherData.gas = parseInt(gasMatch[1]);
+                    logToConsole(`💨 Gas: ${weatherData.gas} ppm`);
+                }
+            }
+            
+            if (data.includes('LIGHT:')) {
+                const lightMatch = data.match(/LIGHT:\s*(\d+)/);
+                if (lightMatch) {
+                    weatherData.light = parseInt(lightMatch[1]);
+                    logToConsole(`☀️ Luz: ${weatherData.light}%`);
+                }
+            }
+            
+            if (data.includes('STATUS:')) {
+                const statusMatch = data.match(/STATUS:\s*(\w+)/);
+                if (statusMatch) {
+                    const status = statusMatch[1];
+                    logToConsole(`📊 Estado: ${status === 'GOOD' ? 'BUENAS' : 'MALAS'}`);
+                }
+            }
+            
+            if (data.includes('TIMESTAMP:')) {
+                const timestampMatch = data.match(/TIMESTAMP:\s*(.*)/);
+                if (timestampMatch) {
+                    logToConsole(`🕒 ${timestampMatch[1]}`);
+                }
+            }
+            
+            if (data.includes('DATA_SAVED:')) {
+                logToConsole('💾 Datos guardados en SD');
+            }
+            
+            if (data.includes('ERROR:')) {
+                const errorMatch = data.match(/ERROR:\s*(.*)/);
+                if (errorMatch) {
+                    logToConsole(`❌ ${errorMatch[1]}`, 'error');
+                }
+            }
+            
+            if (data.includes('INFO:')) {
+                const infoMatch = data.match(/INFO:\s*(.*)/);
+                if (infoMatch) {
+                    logToConsole(`ℹ️ ${infoMatch[1]}`, 'info');
+                }
+            }
+            
+            updateDisplay();
+            updateOverallStatus();
+        }
 
-        function sendCommand(command) {
-            if (bluetoothCharacteristic && isConnected) {
-                try {
-                    const encoder = new TextEncoder();
-                    const data = encoder.encode(command + '\n');
-                    bluetoothCharacteristic.writeValue(data);
-                    logToConsole(`📤 Comando: ${command}`);
-                } catch (error) {
-                    logToConsole(`❌ Error enviando: ${error.message}`);
-                }
-            }
-        }
+        function sendCommand(command) {
+            if (bluetoothCharacteristic && isConnected) {
+                try {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(command + '\n');
+                    bluetoothCharacteristic.writeValue(data);
+                    logToConsole(`📤 Comando: ${command}`);
+                } catch (error) {
+                    logToConsole(`❌ Error enviando: ${error.message}`);
+                }
+            }
+        }
 
-        function requestStatus() {
-            sendCommand('STATUS');
-        }
+        function requestStatus() {
+            sendCommand('STATUS');
+        }
 
-        function requestTime() {
-            sendCommand('TIME');
-        }
+        function requestTime() {
+            sendCommand('TIME');
+        }
 
-        function resetLeds() {
-            sendCommand('RESET_LEDS');
-        }
+        function resetLeds() {
+            sendCommand('RESET_LEDS');
+        }
 
-        function requestInfo() {
-            sendCommand('INFO');
-        }
+        function requestInfo() {
+            sendCommand('INFO');
+        }
 
-        function updateDisplay() {
-            const tempEl = document.getElementById('temperature');
-            const tempCard = document.getElementById('tempCard');
-            if (weatherData.temperature !== null) {
-                tempEl.textContent = weatherData.temperature.toFixed(1);
-                tempCard.className = 'data-card';
-                if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
-                    tempCard.classList.add('danger');
-                }
-            }
+        function updateDisplay() {
+            const tempEl = document.getElementById('temperature');
+            const tempCard = document.getElementById('tempCard');
+            if (weatherData.temperature !== null) {
+                tempEl.textContent = weatherData.temperature.toFixed(1);
+                tempCard.className = 'data-card';
+                if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
+                    tempCard.classList.add('danger');
+                }
+            }
 
-            const humEl = document.getElementById('humidity');
-            const humCard = document.getElementById('humCard');
-            if (weatherData.humidity !== null) {
-                humEl.textContent = weatherData.humidity.toFixed(1);
-                humCard.className = 'data-card';
-                if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
-                    humCard.classList.add('warning');
-                }
-            }
+            const humEl = document.getElementById('humidity');
+          const humCard = document.getElementById('humCard');
+            if (weatherData.humidity !== null) {
+                humEl.textContent = weatherData.humidity.toFixed(1);
+                humCard.className = 'data-card';
+                if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
+                    humCard.classList.add('warning');
+                }
+            }
 
-            const gasEl = document.getElementById('gas');
-            const gasCard = document.getElementById('gasCard');
-            if (weatherData.gas !== null) {
-                gasEl.textContent = weatherData.gas;
-                gasCard.className = 'data-card';
-                if (weatherData.gas > THRESHOLDS.GAS_MAX) {
-                    gasCard.classList.add('danger');
-                }
-            }
+            const gasEl = document.getElementById('gas');
+            const gasCard = document.getElementById('gasCard');
+            if (weatherData.gas !== null) {
+                gasEl.textContent = weatherData.gas;
+                gasCard.className = 'data-card';
+                if (weatherData.gas > THRESHOLDS.GAS_MAX) {
+                    gasCard.classList.add('danger');
+                }
+            }
 
-            const lightEl = document.getElementById('light');
-            const lightCard = document.getElementById('lightCard');
-            if (weatherData.light !== null) {
-                lightEl.textContent = weatherData.light.toFixed(0);
-                lightCard.className = 'data-card';
-            }
-        }
+            const lightEl = document.getElementById('light');
+            const lightCard = document.getElementById('lightCard');
+            if (weatherData.light !== null) {
+                lightEl.textContent = weatherData.light.toFixed(0);
+                lightCard.className = 'data-card';
+            }
+        }
 
-        function updateOverallStatus() {
-            const statusEl = document.getElementById('overallStatus');
-            
-            if (!isConnected) {
-                statusEl.className = 'status-indicator';
-                statusEl.innerHTML = '<span>⏳ ESPERANDO CONEXIÓN...</span>';
-                return;
-            }
+        function updateOverallStatus() {
+            const statusEl = document.getElementById('overallStatus');
+            
+            if (!isConnected) {
+                statusEl.className = 'status-indicator';
+                statusEl.innerHTML = '<span>⏳ ESPERANDO CONEXIÓN...</span>';
+                return;
+            }
 
-            const allDataAvailable = weatherData.temperature !== null && 
-                                   weatherData.humidity !== null && 
-                                   weatherData.gas !== null;
+            const allDataAvailable = weatherData.temperature !== null && 
+                                   weatherData.humidity !== null && 
+                    _              weatherData.gas !== null;
 
-            if (!allDataAvailable) {
-                statusEl.className = 'status-indicator';
-                statusEl.innerHTML = '<span>📡 RECIBIENDO DATOS...</span>';
-                return;
-            }
+            if (!allDataAvailable) {
+                statusEl.className = 'status-indicator';
+                statusEl.innerHTML = '<span>📡 RECIBIENDO DATOS...</span>';
+                return;
+            }
 
-            const tempOK = weatherData.temperature >= THRESHOLDS.TEMP_MIN && 
-                          weatherData.temperature <= THRESHOLDS.TEMP_MAX;
-            const humOK = weatherData.humidity >= THRESHOLDS.HUM_MIN && 
-                         weatherData.humidity <= THRESHOLDS.HUM_MAX;
-            const gasOK = weatherData.gas <= THRESHOLDS.GAS_MAX;
+            const tempOK = weatherData.temperature >= THRESHOLDS.TEMP_MIN && 
+                          weatherData.temperature <= THRESHOLDS.TEMP_MAX;
+            const humOK = weatherData.humidity >= THRESHOLDS.HUM_MIN && 
+                         weatherData.humidity <= THRESHOLDS.HUM_MAX;
 
-            if (tempOK && humOK && gasOK) {
-                statusEl.className = 'status-indicator status-good';
-                statusEl.innerHTML = '<span>✅ CONDICIONES BUENAS</span>';
-            } else {
-                statusEl.className = 'status-indicator status-bad';
-                statusEl.innerHTML = '<span>⚠️ CONDICIONES MALAS</span>';
-            }
-        }
+            const gasOK = weatherData.gas <= THRESHOLDS.GAS_MAX;
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js').then(function(registration) {
-                    logToConsole('✅ Service Worker registrado');
-                }).catch(function(error) {
-                    logToConsole(`❌ Error SW: ${error}`);
-                });
-            });
-        }
+            if (tempOK && humOK && gasOK) {
+                statusEl.className = 'status-indicator status-good';
+                statusEl.innerHTML = '<span>✅ CONDICIONES BUENAS</span>';
+            } else {
+                statusEl.className = 'status-indicator status-bad';
 
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            logToConsole('📱 App instalable como PWA');
-        });
+                statusEl.innerHTML = '<span>⚠️ CONDICIONES MALAS</span>';
+            }
+        }
 
-        updateDisplay();
-        updateOverallStatus();
-    </script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+
+                    logToConsole('✅ Service Worker registrado');
+                }).catch(function(error) {
+                    logToConsole(`❌ Error SW: ${error}`);
+                });
+            });
+        }
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            logToConsole('📱 App instalable como PWA');
+        });
+
+        updateDisplay();
+        updateOverallStatus();
+    </script>
 </body>
 </html>
