@@ -508,7 +508,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>🌡️ Estacion Sello</h1>
+            <h1>🌡️ Estacion Sasdasd :)</h1>
             <div class="status" id="connectionStatus">DESCONECTADO</div>
         </div>
 
@@ -713,6 +713,31 @@
     });
   }
 
+    function parseArduinoData(line) {
+  // Acepta TEMP/HUM con decimales, GAS/LIGHT enteros. Tolera varias claves en una línea.
+  const regex = /(TEMP|HUM|GAS|LIGHT):\s*([\-]?\d+(?:\.\d+)?)/g;
+  let m, touched = false;
+
+  while ((m = regex.exec(line)) !== null) {
+    const key = m[1];
+    const val = m[2];
+
+    if (key === 'TEMP') {
+      const n = parseFloat(val);
+      if (Number.isFinite(n)) { weatherData.temperature = n; touched = true; }
+    } else if (key === 'HUM') {
+      const n = parseFloat(val);
+      if (Number.isFinite(n)) { weatherData.humidity = n; touched = true; }
+    } else if (key === 'GAS') {
+      const n = parseInt(val, 10);
+      if (Number.isFinite(n)) { weatherData.gas = n; touched = true; }
+    } else if (key === 'LIGHT') {
+      const n = parseInt(val, 10);
+      if (Number.isFinite(n)) { weatherData.light = n; touched = true; }
+    }
+  }
+
+
   async function sendCommand(command) {
     if (!rxTxChar || !isConnected) return;
     try {
@@ -742,43 +767,43 @@
         }
 
         function updateDisplay() {
-            const tempEl = document.getElementById('temperature');
-            const tempCard = document.getElementById('tempCard');
-            if (weatherData.temperature !== null) {
-                tempEl.textContent = weatherData.temperature.toFixed(1);
-                tempCard.className = 'data-card';
-                if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
-                    tempCard.classList.add('danger');
-                }
-            }
-
-            const humEl = document.getElementById('humidity');
-            const humCard = document.getElementById('humCard');
-            if (weatherData.humidity !== null) {
-                humEl.textContent = weatherData.humidity.toFixed(1);
-                humCard.className = 'data-card';
-                if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
-                    humCard.classList.add('warning');
-                }
-            }
-
-            const gasEl = document.getElementById('gas');
-            const gasCard = document.getElementById('gasCard');
-            if (weatherData.gas !== null) {
-                gasEl.textContent = weatherData.gas;
-                gasCard.className = 'data-card';
-                if (weatherData.gas > THRESHOLDS.GAS_MAX) {
-                    gasCard.classList.add('danger');
-                }
-            }
-
-            const lightEl = document.getElementById('light');
-            const lightCard = document.getElementById('lightCard');
-            if (weatherData.light !== null) {
-                lightEl.textContent = weatherData.light.toFixed(0);
-                lightCard.className = 'data-card';
-            }
+      const tempEl = document.getElementById('temperature');
+      const tempCard = document.getElementById('tempCard');
+      if (Number.isFinite(weatherData.temperature)) {
+        tempEl.textContent = weatherData.temperature.toFixed(1);
+        tempCard.className = 'data-card';
+        if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
+          tempCard.classList.add('danger');
         }
+      }
+
+      const humEl = document.getElementById('humidity');
+      const humCard = document.getElementById('humCard');
+      if (Number.isFinite(weatherData.humidity)) {
+        humEl.textContent = weatherData.humidity.toFixed(1);
+        humCard.className = 'data-card';
+        if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
+          humCard.classList.add('warning');
+        }
+      }
+
+      const gasEl = document.getElementById('gas');
+      const gasCard = document.getElementById('gasCard');
+      if (Number.isFinite(weatherData.gas)) {
+        gasEl.textContent = String(weatherData.gas);
+        gasCard.className = 'data-card';
+        if (weatherData.gas > THRESHOLDS.GAS_MAX) {
+          gasCard.classList.add('danger');
+        }
+      }
+
+      const lightEl = document.getElementById('light');
+      const lightCard = document.getElementById('lightCard');
+      if (Number.isFinite(weatherData.light)) {
+        lightEl.textContent = weatherData.light.toFixed(0);
+        lightCard.className = 'data-card';
+      }
+    }
 
         function updateOverallStatus() {
             const statusEl = document.getElementById('overallStatus');
