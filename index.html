@@ -245,6 +245,7 @@
 
         /* Status indicator futurista */
         .status-indicator {
+            color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -507,7 +508,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>🌡️ Weather Staaa:V</h1>
+            <h1>🌡️ Estacion Sello</h1>
             <div class="status" id="connectionStatus">DESCONECTADO</div>
         </div>
 
@@ -558,7 +559,7 @@
         </div>
     </div>
 
-    <script>
+       <script>
         // Crear partículas flotantes
         function createParticles() {
             for(let i = 0; i < 20; i++) {
@@ -575,10 +576,6 @@
         }
         createParticles();
 
-        let bluetoothDevice;
-        let bluetoothCharacteristic;
-        let isConnected = false;
-        let receivedData = '';
 
         let weatherData = {
             temperature: null,
@@ -623,204 +620,110 @@
             }
         }
 
-        async function connectBluetooth() {
-            try {
-                if (!navigator.bluetooth) {
-                    throw new Error('Bluetooth Web API no soportado');
-                }
+       // UUIDs HM-10 (muchos clones usan exactamente estos con base 0xFFE0/0xFFE1)
+  const HM10_SERVICE = '0000ffe0-0000-1000-8000-00805f9b34fb';
+  const HM10_CHAR    = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
-                updateConnectionStatus('Buscando...', true);
-                logToConsole('🔍 Iniciando búsqueda Bluetooth...');
+  let bluetoothDevice;
+  let gattServer;
+  let rxTxChar;               // misma characteristic para notificar y escribir en HM-10
+  let isConnected = false;
+  let receivedData = '';
 
-                bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    filters: [
-                        { name: 'HC-05' },
-                        { name: 'HC-06' },
-                        { namePrefix: 'ESP32' },
-                        { namePrefix: 'Arduino' }
-                    ],
-                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
-                });
+  async function connectBluetooth() {
+    try {
+      if (!navigator.bluetooth) throw new Error('Bluetooth Web API no soportado');
 
-                updateConnectionStatus('Conectando...', true);
-                logToConsole(`📱 Dispositivo: ${bluetoothDevice.name}`);
+      updateConnectionStatus('Buscando...', true);
+      logToConsole('🔍 Buscando HM-10 (BLE)…');
 
-                const server = await bluetoothDevice.gatt.connect();
-                logToConsole('✅ Servidor GATT conectado');
+      // Tip: filtrar por servicio mejora el descubrimiento
+      bluetoothDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [HM10_SERVICE] }]
+      });
 
-                try {
-                    const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-                    bluetoothCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
-                    
-                    await bluetoothCharacteristic.startNotifications();
-                    bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleDataReceived);
-                    
-                    setTimeout(() => {
-                        sendCommand('STATUS');
-                    }, 1000);
-                    
-                } catch (serviceError) {
-                    logToConsole('⚠️ Intentando servicio básico...');
-                    try {
-                        const services = await server.getPrimaryServices();
-                        logToConsole(`📡 Servicios: ${services.length}`);
-                        if (services.length > 0) {
-                            const characteristics = await services[0].getCharacteristics();
-                            if (characteristics.length > 0) {
-                                bluetoothCharacteristic = characteristics[0];
-                                await bluetoothCharacteristic.startNotifications();
-                                bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleDataReceived);
-                            }
-                        }
-                    } catch (fallbackError) {
-                        logToConsole('❌ No se pudo establecer comunicación');
-                    }
-                }
+      updateConnectionStatus('Conectando...', true);
+      logToConsole(`📱 Dispositivo: ${bluetoothDevice.name || '(sin nombre)'}`);
 
-                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+      gattServer = await bluetoothDevice.gatt.connect();
+      logToConsole('✅ Servidor GATT conectado');
 
-                isConnected = true;
-                updateConnectionStatus('Conectado');
-                document.getElementById('connectBtn').style.display = 'none';
-                document.getElementById('disconnectBtn').style.display = 'block';
-                document.getElementById('controlButtons').style.display = 'flex';
-                
-                updateOverallStatus();
-                logToConsole('✅ Conexión establecida');
+      const service = await gattServer.getPrimaryService(HM10_SERVICE);
+      rxTxChar = await service.getCharacteristic(HM10_CHAR);
 
-            } catch (error) {
-                logToConsole(`❌ Error: ${error.message}`);
-                showError(`Error de conexión: ${error.message}`);
-                updateConnectionStatus('Error');
-            }
-        }
+      // HM-10 notifica en la misma characteristic (FFE1)
+      await rxTxChar.startNotifications();
+      rxTxChar.addEventListener('characteristicvaluechanged', handleDataReceived);
 
-        function disconnectBluetooth() {
-            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                bluetoothDevice.gatt.disconnect();
-            }
-            onDisconnected();
-        }
+      bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-        function onDisconnected() {
-            isConnected = false;
-            bluetoothDevice = null;
-            bluetoothCharacteristic = null;
-            
-            updateConnectionStatus('Desconectado');
-            document.getElementById('connectBtn').style.display = 'block';
-            document.getElementById('disconnectBtn').style.display = 'none';
-            document.getElementById('controlButtons').style.display = 'none';
-            
-            weatherData = {
-                temperature: null,
-                humidity: null,
-                gas: null,
-                light: null
-            };
-            
-            updateDisplay();
-            updateOverallStatus();
-            logToConsole('🔴 Desconectado');
-        }
+      isConnected = true;
+      updateConnectionStatus('Conectado');
+      document.getElementById('connectBtn').style.display = 'none';
+      document.getElementById('disconnectBtn').style.display = 'block';
+      document.getElementById('controlButtons').style.display = 'flex';
 
-        function handleDataReceived(event) {
-            const value = new TextDecoder().decode(event.target.value);
-            receivedData += value;
-            
-            const lines = receivedData.split('\n');
-            receivedData = lines.pop();
-            
-            lines.forEach(line => {
-                if (line.trim()) {
-                    logToConsole(`📡 ${line.trim()}`);
-                    parseArduinoData(line.trim());
-                }
-            });
-        }
+      updateOverallStatus();
+      logToConsole('✅ Notificaciones activadas en FFE1');
+      // Pedimos un estado inicial
+      setTimeout(() => sendCommand('STATUS'), 800);
 
-        function parseArduinoData(data) {
-            if (data.includes('TEMP:')) {
-                const tempMatch = data.match(/TEMP:\s*(\d+\.?\d*)/);
-                if (tempMatch && tempMatch[1] !== 'ERROR') {
-                    weatherData.temperature = parseFloat(tempMatch[1]);
-                    logToConsole(`🌡️ Temperatura: ${weatherData.temperature}°C`);
-                }
-            }
-            
-            if (data.includes('HUM:')) {
-                const humMatch = data.match(/HUM:\s*(\d+\.?\d*)/);
-                if (humMatch && humMatch[1] !== 'ERROR') {
-                    weatherData.humidity = parseFloat(humMatch[1]);
-                    logToConsole(`💧 Humedad: ${weatherData.humidity}%`);
-                }
-            }
-            
-            if (data.includes('GAS:')) {
-                const gasMatch = data.match(/GAS:\s*(\d+)/);
-                if (gasMatch) {
-                    weatherData.gas = parseInt(gasMatch[1]);
-                    logToConsole(`💨 Gas: ${weatherData.gas} ppm`);
-                }
-            }
-            
-            if (data.includes('LIGHT:')) {
-                const lightMatch = data.match(/LIGHT:\s*(\d+)/);
-                if (lightMatch) {
-                    weatherData.light = parseInt(lightMatch[1]);
-                    logToConsole(`☀️ Luz: ${weatherData.light}%`);
-                }
-            }
-            
-            if (data.includes('STATUS:')) {
-                const statusMatch = data.match(/STATUS:\s*(\w+)/);
-                if (statusMatch) {
-                    const status = statusMatch[1];
-                    logToConsole(`📊 Estado: ${status === 'GOOD' ? 'BUENAS' : 'MALAS'}`);
-                }
-            }
-            
-            if (data.includes('TIMESTAMP:')) {
-                const timestampMatch = data.match(/TIMESTAMP:\s*(.*)/);
-                if (timestampMatch) {
-                    logToConsole(`🕒 ${timestampMatch[1]}`);
-                }
-            }
-            
-            if (data.includes('DATA_SAVED:')) {
-                logToConsole('💾 Datos guardados en SD');
-            }
-            
-            if (data.includes('ERROR:')) {
-                const errorMatch = data.match(/ERROR:\s*(.*)/);
-                if (errorMatch) {
-                    logToConsole(`❌ ${errorMatch[1]}`, 'error');
-                }
-            }
-            
-            if (data.includes('INFO:')) {
-                const infoMatch = data.match(/INFO:\s*(.*)/);
-                if (infoMatch) {
-                    logToConsole(`ℹ️ ${infoMatch[1]}`, 'info');
-                }
-            }
-            
-            updateDisplay();
-            updateOverallStatus();
-        }
+    } catch (error) {
+      logToConsole(`❌ Error: ${error.message}`);
+      showError(`Error de conexión: ${error.message}`);
+      updateConnectionStatus('Error');
+    }
+  }
 
-        function sendCommand(command) {
-            if (bluetoothCharacteristic && isConnected) {
-                try {
-                    const encoder = new TextEncoder();
-                    const data = encoder.encode(command + '\n');
-                    bluetoothCharacteristic.writeValue(data);
-                    logToConsole(`📤 Comando: ${command}`);
-                } catch (error) {
-                    logToConsole(`❌ Error enviando: ${error.message}`);
-                }
-            }
-        }
+  function onDisconnected() {
+    isConnected = false;
+    bluetoothDevice = null;
+    gattServer = null;
+    rxTxChar = null;
+
+    updateConnectionStatus('Desconectado');
+    document.getElementById('connectBtn').style.display = 'block';
+    document.getElementById('disconnectBtn').style.display = 'none';
+    document.getElementById('controlButtons').style.display = 'none';
+
+    weatherData = { temperature: null, humidity: null, gas: null, light: null };
+    updateDisplay();
+    updateOverallStatus();
+    logToConsole('🔴 Desconectado');
+  }
+
+  function disconnectBluetooth() {
+    if (bluetoothDevice?.gatt?.connected) bluetoothDevice.gatt.disconnect();
+    onDisconnected();
+  }
+
+  function handleDataReceived(event) {
+    const chunk = new TextDecoder().decode(event.target.value);
+    receivedData += chunk;
+
+    // HM-10 suele terminar líneas con \r\n → partimos por \n y limpiamos \r
+    const lines = receivedData.split('\n');
+    receivedData = lines.pop();
+
+    lines.forEach(line => {
+      const clean = line.replace(/\r/g, '').trim();
+      if (!clean) return;
+      logToConsole(`📡 ${clean}`);
+      parseArduinoData(clean);
+    });
+  }
+
+  async function sendCommand(command) {
+    if (!rxTxChar || !isConnected) return;
+    try {
+      const data = new TextEncoder().encode(command + '\n');
+      // Muchos HM-10 aceptan write sin response en FFE1, pero WebBluetooth usa writeValue()
+      await rxTxChar.writeValue(data);
+      logToConsole(`📤 Comando: ${command}`);
+    } catch (e) {
+      logToConsole(`❌ Error enviando: ${e.message}`);
+    }
+  }
 
         function requestStatus() {
             sendCommand('STATUS');
