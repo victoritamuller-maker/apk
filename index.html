@@ -508,7 +508,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>🌡️ Estacion Sasdasd :)</h1>
+            <h1>🌡️ Estacion Sasdasd ;;)</h1>
             <div class="status" id="connectionStatus">DESCONECTADO</div>
         </div>
 
@@ -559,74 +559,123 @@
         </div>
     </div>
 
-       <script>
-        // Crear partículas flotantes
-        function createParticles() {
-            for(let i = 0; i < 20; i++) {
-                setTimeout(() => {
-                    const particle = document.createElement('div');
-                    particle.className = 'particle';
-                    particle.style.left = Math.random() * 100 + '%';
-                    particle.style.top = Math.random() * 100 + '%';
-                    particle.style.animation = `float ${5 + Math.random() * 10}s ease-in-out infinite`;
-                    particle.style.animationDelay = Math.random() * 5 + 's';
-                    document.body.appendChild(particle);
-                }, i * 200);
-            }
-        }
-        createParticles();
+    <script>
+  // Partículas (cosmética)
+  (function createParticles(){
+    for (let i = 0; i < 20; i++) {
+      setTimeout(() => {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random()*100 + '%';
+        p.style.top = Math.random()*100 + '%';
+        p.style.animation = `float ${5 + Math.random()*10}s ease-in-out infinite`;
+        p.style.animationDelay = Math.random()*5 + 's';
+        document.body.appendChild(p);
+      }, i*200);
+    }
+  })();
 
+  // ------- Estado UI -------
+  let weatherData = { temperature: null, humidity: null, gas: null, light: null };
+  const THRESHOLDS = { TEMP_MIN: 15, TEMP_MAX: 30, HUM_MIN: 30, HUM_MAX: 70, GAS_MAX: 600 };
 
-        let weatherData = {
-            temperature: null,
-            humidity: null,
-            gas: null,
-            light: null
-        };
+  function logToConsole(message) {
+    const c = document.getElementById('console');
+    const t = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.innerHTML = `<span class="timestamp">[${t}]</span> ${message}`;
+    c.appendChild(div);
+    c.scrollTop = c.scrollHeight;
+  }
 
-        const THRESHOLDS = {
-            TEMP_MIN: 15,
-            TEMP_MAX: 30,
-            HUM_MIN: 30,
-            HUM_MAX: 70,
-            GAS_MAX: 600
-        };
+  function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.innerHTML = `<div class="error-message">⚠️ ${message}</div>`;
+    logToConsole(`ERROR: ${message}`);
+    setTimeout(() => { errorDiv.innerHTML = ''; }, 5000);
+  }
 
-        function logToConsole(message, type = 'info') {
-            const console = document.getElementById('console');
-            const now = new Date();
-            const timestamp = now.toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            
-            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
-            console.appendChild(logEntry);
-            console.scrollTop = console.scrollHeight;
-        }
+  function updateConnectionStatus(status, isConnecting=false) {
+    const el = document.getElementById('connectionStatus');
+    el.textContent = status.toUpperCase();
+    if (isConnecting) el.innerHTML += '<div class="loading"></div>';
+  }
 
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.innerHTML = `<div class="error-message">⚠️ ${message}</div>`;
-            logToConsole(`ERROR: ${message}`, 'error');
-            setTimeout(() => {
-                errorDiv.innerHTML = '';
-            }, 5000);
-        }
+  function updateDisplay() {
+    const set = (id, val, fixed=1) => {
+      const el = document.getElementById(id);
+      if (Number.isFinite(val)) el.textContent = fixed ? val.toFixed(fixed) : String(val);
+    };
 
-        function updateConnectionStatus(status, isConnecting = false) {
-            const statusElement = document.getElementById('connectionStatus');
-            statusElement.textContent = status.toUpperCase();
-            if (isConnecting) {
-                statusElement.innerHTML += '<div class="loading"></div>';
-            }
-        }
+    const tempCard = document.getElementById('tempCard');
+    const humCard  = document.getElementById('humCard');
+    const gasCard  = document.getElementById('gasCard');
+    const lightCard= document.getElementById('lightCard');
 
-       // UUIDs HM-10 (muchos clones usan exactamente estos con base 0xFFE0/0xFFE1)
+    // temperatura
+    if (Number.isFinite(weatherData.temperature)) {
+      set('temperature', weatherData.temperature, 1);
+      tempCard.className = 'data-card';
+      if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
+        tempCard.classList.add('danger');
+      }
+    }
+    // humedad
+    if (Number.isFinite(weatherData.humidity)) {
+      set('humidity', weatherData.humidity, 1);
+      humCard.className = 'data-card';
+      if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
+        humCard.classList.add('warning');
+      }
+    }
+    // gas
+    if (Number.isFinite(weatherData.gas)) {
+      set('gas', weatherData.gas, 0);
+      gasCard.className = 'data-card';
+      if (weatherData.gas > THRESHOLDS.GAS_MAX) {
+        gasCard.classList.add('danger');
+      }
+    }
+    // luz
+    if (Number.isFinite(weatherData.light)) {
+      set('light', weatherData.light, 0);
+      lightCard.className = 'data-card';
+    }
+  }
+
+  function updateOverallStatus() {
+    const statusEl = document.getElementById('overallStatus');
+    if (!isConnected) {
+      statusEl.className = 'status-indicator';
+      statusEl.innerHTML = '<span>⏳ ESPERANDO CONEXIÓN...</span>';
+      return;
+    }
+    const okT = Number.isFinite(weatherData.temperature) && weatherData.temperature >= THRESHOLDS.TEMP_MIN && weatherData.temperature <= THRESHOLDS.TEMP_MAX;
+    const okH = Number.isFinite(weatherData.humidity)    && weatherData.humidity    >= THRESHOLDS.HUM_MIN  && weatherData.humidity    <= THRESHOLDS.HUM_MAX;
+    const okG = Number.isFinite(weatherData.gas) && weatherData.gas <= THRESHOLDS.GAS_MAX;
+
+    const allHave = Number.isFinite(weatherData.temperature) && Number.isFinite(weatherData.humidity) && Number.isFinite(weatherData.gas);
+    if (!allHave) {
+      statusEl.className = 'status-indicator';
+      statusEl.innerHTML = '<span>📡 RECIBIENDO DATOS...</span>';
+      return;
+    }
+    if (okT && okH && okG) {
+      statusEl.className = 'status-indicator status-good';
+      statusEl.innerHTML = '<span>✅ CONDICIONES BUENAS</span>';
+    } else {
+      statusEl.className = 'status-indicator status-bad';
+      statusEl.innerHTML = '<span>⚠️ CONDICIONES MALAS</span>';
+    }
+  }
+
+  // ------- BLE (HM-10 FFE0/FFE1) -------
   const HM10_SERVICE = '0000ffe0-0000-1000-8000-00805f9b34fb';
   const HM10_CHAR    = '0000ffe1-0000-1000-8000-00805f9b34fb';
 
   let bluetoothDevice;
   let gattServer;
-  let rxTxChar;               // misma characteristic para notificar y escribir en HM-10
+  let rxTxChar;
   let isConnected = false;
   let receivedData = '';
 
@@ -637,11 +686,7 @@
       updateConnectionStatus('Buscando...', true);
       logToConsole('🔍 Buscando HM-10 (BLE)…');
 
-      // Tip: filtrar por servicio mejora el descubrimiento
-      bluetoothDevice = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [HM10_SERVICE] }]
-      });
-
+      bluetoothDevice = await navigator.bluetooth.requestDevice({ filters: [{ services: [HM10_SERVICE] }] });
       updateConnectionStatus('Conectando...', true);
       logToConsole(`📱 Dispositivo: ${bluetoothDevice.name || '(sin nombre)'}`);
 
@@ -651,7 +696,6 @@
       const service = await gattServer.getPrimaryService(HM10_SERVICE);
       rxTxChar = await service.getCharacteristic(HM10_CHAR);
 
-      // HM-10 notifica en la misma characteristic (FFE1)
       await rxTxChar.startNotifications();
       rxTxChar.addEventListener('characteristicvaluechanged', handleDataReceived);
 
@@ -665,14 +709,18 @@
 
       updateOverallStatus();
       logToConsole('✅ Notificaciones activadas en FFE1');
-      // Pedimos un estado inicial
-      setTimeout(() => sendCommand('STATUS'), 800);
 
+      setTimeout(() => sendCommand('STATUS'), 800);
     } catch (error) {
       logToConsole(`❌ Error: ${error.message}`);
       showError(`Error de conexión: ${error.message}`);
       updateConnectionStatus('Error');
     }
+  }
+
+  function disconnectBluetooth() {
+    if (bluetoothDevice?.gatt?.connected) bluetoothDevice.gatt.disconnect();
+    onDisconnected();
   }
 
   function onDisconnected() {
@@ -692,57 +740,26 @@
     logToConsole('🔴 Desconectado');
   }
 
-  function disconnectBluetooth() {
-    if (bluetoothDevice?.gatt?.connected) bluetoothDevice.gatt.disconnect();
-    onDisconnected();
-  }
-
   function handleDataReceived(event) {
     const chunk = new TextDecoder().decode(event.target.value);
     receivedData += chunk;
 
-    // HM-10 suele terminar líneas con \r\n → partimos por \n y limpiamos \r
+    // HM-10 suele enviar \r\n → partimos por \n y limpiamos \r
     const lines = receivedData.split('\n');
-    receivedData = lines.pop();
+    receivedData = lines.pop(); // queda el buffer incompleto
 
-    lines.forEach(line => {
-      const clean = line.replace(/\r/g, '').trim();
-      if (!clean) return;
-      logToConsole(`📡 ${clean}`);
-      parseArduinoData(clean);
-    });
-  }
-
-    function parseArduinoData(line) {
-  // Acepta TEMP/HUM con decimales, GAS/LIGHT enteros. Tolera varias claves en una línea.
-  const regex = /(TEMP|HUM|GAS|LIGHT):\s*([\-]?\d+(?:\.\d+)?)/g;
-  let m, touched = false;
-
-  while ((m = regex.exec(line)) !== null) {
-    const key = m[1];
-    const val = m[2];
-
-    if (key === 'TEMP') {
-      const n = parseFloat(val);
-      if (Number.isFinite(n)) { weatherData.temperature = n; touched = true; }
-    } else if (key === 'HUM') {
-      const n = parseFloat(val);
-      if (Number.isFinite(n)) { weatherData.humidity = n; touched = true; }
-    } else if (key === 'GAS') {
-      const n = parseInt(val, 10);
-      if (Number.isFinite(n)) { weatherData.gas = n; touched = true; }
-    } else if (key === 'LIGHT') {
-      const n = parseInt(val, 10);
-      if (Number.isFinite(n)) { weatherData.light = n; touched = true; }
+    for (const raw of lines) {
+      const line = raw.replace(/\r/g, '').trim();
+      if (!line) continue;
+      logToConsole(`📡 ${line}`);
+      parseArduinoData(line);
     }
   }
-
 
   async function sendCommand(command) {
     if (!rxTxChar || !isConnected) return;
     try {
       const data = new TextEncoder().encode(command + '\n');
-      // Muchos HM-10 aceptan write sin response en FFE1, pero WebBluetooth usa writeValue()
       await rxTxChar.writeValue(data);
       logToConsole(`📤 Comando: ${command}`);
     } catch (e) {
@@ -750,114 +767,71 @@
     }
   }
 
-        function requestStatus() {
-            sendCommand('STATUS');
-        }
+  function requestStatus(){ sendCommand('STATUS'); }
+  function requestTime(){ sendCommand('TIME'); }
+  function resetLeds(){ sendCommand('RESET_LEDS'); }
+  function requestInfo(){ sendCommand('INFO'); }
 
-        function requestTime() {
-            sendCommand('TIME');
-        }
+  // ------- Parser robusto -------
+  function parseArduinoData(line) {
+    // Acepta múltiples pares por línea. TEMP/HUM decimales; GAS/LIGHT enteros
+    const regex = /(TEMP|HUM|GAS|LIGHT):\s*([\-]?\d+(?:\.\d+)?)/g;
+    let m, touched = false;
 
-        function resetLeds() {
-            sendCommand('RESET_LEDS');
-        }
-
-        function requestInfo() {
-            sendCommand('INFO');
-        }
-
-        function updateDisplay() {
-      const tempEl = document.getElementById('temperature');
-      const tempCard = document.getElementById('tempCard');
-      if (Number.isFinite(weatherData.temperature)) {
-        tempEl.textContent = weatherData.temperature.toFixed(1);
-        tempCard.className = 'data-card';
-        if (weatherData.temperature > THRESHOLDS.TEMP_MAX || weatherData.temperature < THRESHOLDS.TEMP_MIN) {
-          tempCard.classList.add('danger');
-        }
-      }
-
-      const humEl = document.getElementById('humidity');
-      const humCard = document.getElementById('humCard');
-      if (Number.isFinite(weatherData.humidity)) {
-        humEl.textContent = weatherData.humidity.toFixed(1);
-        humCard.className = 'data-card';
-        if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
-          humCard.classList.add('warning');
-        }
-      }
-
-      const gasEl = document.getElementById('gas');
-      const gasCard = document.getElementById('gasCard');
-      if (Number.isFinite(weatherData.gas)) {
-        gasEl.textContent = String(weatherData.gas);
-        gasCard.className = 'data-card';
-        if (weatherData.gas > THRESHOLDS.GAS_MAX) {
-          gasCard.classList.add('danger');
-        }
-      }
-
-      const lightEl = document.getElementById('light');
-      const lightCard = document.getElementById('lightCard');
-      if (Number.isFinite(weatherData.light)) {
-        lightEl.textContent = weatherData.light.toFixed(0);
-        lightCard.className = 'data-card';
+    while ((m = regex.exec(line)) !== null) {
+      const key = m[1], val = m[2];
+      if (key === 'TEMP') {
+        const n = parseFloat(val);
+        if (Number.isFinite(n)) { weatherData.temperature = n; touched = true; }
+      } else if (key === 'HUM') {
+        const n = parseFloat(val);
+        if (Number.isFinite(n)) { weatherData.humidity = n; touched = true; }
+      } else if (key === 'GAS') {
+        const n = parseInt(val, 10);
+        if (Number.isFinite(n)) { weatherData.gas = n; touched = true; }
+      } else if (key === 'LIGHT') {
+        const n = parseInt(val, 10);
+        if (Number.isFinite(n)) { weatherData.light = n; touched = true; }
       }
     }
 
-        function updateOverallStatus() {
-            const statusEl = document.getElementById('overallStatus');
-            
-            if (!isConnected) {
-                statusEl.className = 'status-indicator';
-                statusEl.innerHTML = '<span>⏳ ESPERANDO CONEXIÓN...</span>';
-                return;
-            }
+    if (line.startsWith('TIME:')) {
+      logToConsole(`🕒 ${line.substring(5).trim()}`);
+    }
+    if (line.includes('STATUS:')) {
+      const s = /STATUS:\s*(\w+)/.exec(line);
+      if (s) logToConsole(`📊 Estado: ${s[1] === 'GOOD' ? 'BUENAS' : 'MALAS'}`);
+    }
+    if (line.includes('DATA_SAVED')) logToConsole('💾 Datos guardados en SD');
+    if (line.startsWith('ERROR:')) logToConsole(`❌ ${line.substring(6).trim()}`);
 
-            const allDataAvailable = weatherData.temperature !== null && 
-                                   weatherData.humidity !== null && 
-                                   weatherData.gas !== null;
+    if (touched) {
+      updateDisplay();
+      updateOverallStatus();
+    }
+  }
 
-            if (!allDataAvailable) {
-                statusEl.className = 'status-indicator';
-                statusEl.innerHTML = '<span>📡 RECIBIENDO DATOS...</span>';
-                return;
-            }
+  // ------- Service Worker -------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => logToConsole('✅ Service Worker registrado'))
+        .catch(err => logToConsole(`❌ Error SW: ${err}`));
+    });
+  }
 
-            const tempOK = weatherData.temperature >= THRESHOLDS.TEMP_MIN && 
-                          weatherData.temperature <= THRESHOLDS.TEMP_MAX;
-            const humOK = weatherData.humidity >= THRESHOLDS.HUM_MIN && 
-                         weatherData.humidity <= THRESHOLDS.HUM_MAX;
-            const gasOK = weatherData.gas <= THRESHOLDS.GAS_MAX;
+  // PWA prompt (opcional)
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    logToConsole('📱 App instalable como PWA');
+  });
 
-            if (tempOK && humOK && gasOK) {
-                statusEl.className = 'status-indicator status-good';
-                statusEl.innerHTML = '<span>✅ CONDICIONES BUENAS</span>';
-            } else {
-                statusEl.className = 'status-indicator status-bad';
-                statusEl.innerHTML = '<span>⚠️ CONDICIONES MALAS</span>';
-            }
-        }
+  // Estado inicial UI
+  updateDisplay();
+  updateOverallStatus();
+</script>
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js').then(function(registration) {
-                    logToConsole('✅ Service Worker registrado');
-                }).catch(function(error) {
-                    logToConsole(`❌ Error SW: ${error}`);
-                });
-            });
-        }
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            logToConsole('📱 App instalable como PWA');
-        });
-
-        updateDisplay();
-        updateOverallStatus();
-    </script>
 </body>
 </html>
