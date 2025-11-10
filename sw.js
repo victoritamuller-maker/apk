@@ -1,5 +1,5 @@
 // Service Worker para Weather Monitor PWA
-const CACHE_NAME = 'weather-monitor-v6.0';
+const CACHE_NAME = 'weather-monitor-v4.1';
 const urlsToCache = [
   '/apk/',
   '/apk/index.html',
@@ -9,7 +9,7 @@ const urlsToCache = [
 
 // Instalación del Service Worker
 self.addEventListener('install', function(event) {
-  console.log('[SW] Instalando Service Worker v3.0...');
+  console.log('[SW] Instalando Service Worker v4.1...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
