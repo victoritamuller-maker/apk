@@ -508,7 +508,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>🌡️ Estacion Sello :V</h1>
+            <h1>🌡️ Estacion Sello</h1>
             <div class="status" id="connectionStatus">DESCONECTADO</div>
         </div>
 
@@ -559,7 +559,7 @@
         </div>
     </div>
 
-    <script>
+       <script>
         // Crear partículas flotantes
         function createParticles() {
             for(let i = 0; i < 20; i++) {
@@ -628,7 +628,7 @@
   let gattServer;
   let rxTxChar;               // misma characteristic para notificar y escribir en HM-10
   let isConnected = false;
-  let receivedData = "";
+  let receivedData = '';
 
   async function connectBluetooth() {
     try {
@@ -698,47 +698,20 @@
   }
 
   function handleDataReceived(event) {
-  const chunk = new TextDecoder().decode(event.target.value);
-  receivedData += chunk;
+    const chunk = new TextDecoder().decode(event.target.value);
+    receivedData += chunk;
 
-  // HM-10 suele usar \r\n → partimos por \n y limpiamos \r
-  const lines = receivedData.split('\n');
-  receivedData = lines.pop(); // buffer para la próxima notificación
+    // HM-10 suele terminar líneas con \r\n → partimos por \n y limpiamos \r
+    const lines = receivedData.split('\n');
+    receivedData = lines.pop();
 
-  for (let raw of lines) {
-    const line = raw.replace(/\r/g, '').trim();
-    if (!line) continue;
-    logToConsole(`📡 ${line}`);
-    parseArduinoData(line);
+    lines.forEach(line => {
+      const clean = line.replace(/\r/g, '').trim();
+      if (!clean) return;
+      logToConsole(`📡 ${clean}`);
+      parseArduinoData(clean);
+    });
   }
-}
-
-function parseArduinoData(line) {
-  // Captura múltiples pares en una sola línea o en líneas separadas
-  // Ej: "TEMP: 23.4", "HUM: 55.2", "GAS: 412", "LIGHT: 67"
-  const regex = /(TEMP|HUM|GAS|LIGHT):\s*([\-]?\d+(?:\.\d+)?)/g;
-  let m;
-  let touched = false;
-
-  while ((m = regex.exec(line)) !== null) {
-    const key = m[1];
-    const val = m[2];
-
-    if (key === 'TEMP') {
-      const n = parseFloat(val);
-      if (!Number.isNaN(n)) { weatherData.temperature = n; touched = true; }
-    } else if (key === 'HUM') {
-      const n = parseFloat(val);
-      if (!Number.isNaN(n)) { weatherData.humidity = n; touched = true; }
-    } else if (key === 'GAS') {
-      const n = parseInt(val, 10);
-      if (!Number.isNaN(n)) { weatherData.gas = n; touched = true; }
-    } else if (key === 'LIGHT') {
-      const n = parseInt(val, 10);
-      if (!Number.isNaN(n)) { weatherData.light = n; touched = true; }
-    }
-  }
-
 
   async function sendCommand(command) {
     if (!rxTxChar || !isConnected) return;
@@ -779,33 +752,33 @@ function parseArduinoData(line) {
                 }
             }
 
-              const humEl = document.getElementById('humidity');
-  const humCard = document.getElementById('humCard');
-  if (Number.isFinite(weatherData.humidity)) {
-    humEl.textContent = weatherData.humidity.toFixed(1);
-    humCard.className = 'data-card';
-    if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
-      humCard.classList.add('warning');
-    }
-  }
+            const humEl = document.getElementById('humidity');
+            const humCard = document.getElementById('humCard');
+            if (weatherData.humidity !== null) {
+                humEl.textContent = weatherData.humidity.toFixed(1);
+                humCard.className = 'data-card';
+                if (weatherData.humidity > THRESHOLDS.HUM_MAX || weatherData.humidity < THRESHOLDS.HUM_MIN) {
+                    humCard.classList.add('warning');
+                }
+            }
 
-  const gasEl = document.getElementById('gas');
-  const gasCard = document.getElementById('gasCard');
-  if (Number.isFinite(weatherData.gas)) {
-    gasEl.textContent = weatherData.gas.toString();
-    gasCard.className = 'data-card';
-    if (weatherData.gas > THRESHOLDS.GAS_MAX) {
-      gasCard.classList.add('danger');
-    }
-  }
+            const gasEl = document.getElementById('gas');
+            const gasCard = document.getElementById('gasCard');
+            if (weatherData.gas !== null) {
+                gasEl.textContent = weatherData.gas;
+                gasCard.className = 'data-card';
+                if (weatherData.gas > THRESHOLDS.GAS_MAX) {
+                    gasCard.classList.add('danger');
+                }
+            }
 
-  const lightEl = document.getElementById('light');
-  const lightCard = document.getElementById('lightCard');
-  if (Number.isFinite(weatherData.light)) {
-    lightEl.textContent = weatherData.light.toFixed(0);
-    lightCard.className = 'data-card';
-  }
-}
+            const lightEl = document.getElementById('light');
+            const lightCard = document.getElementById('lightCard');
+            if (weatherData.light !== null) {
+                lightEl.textContent = weatherData.light.toFixed(0);
+                lightCard.className = 'data-card';
+            }
+        }
 
         function updateOverallStatus() {
             const statusEl = document.getElementById('overallStatus');
